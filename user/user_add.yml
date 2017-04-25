@@ -1,0 +1,16 @@
+---
+  - hosts: "{{ host }}"
+    tasks:
+        - name: Add group 'hadoop2'
+          group:
+              name: "{{ item.name}}"
+              state: present
+          with_items:
+                - {name: "hadoop2"}
+        - name: Add the user 'hadoop',appending the group 'hdgroup' 
+          user:
+              name: "{{item.name}}"
+              groups: hadoop2
+              append: yes
+          with_items:
+              - {name: "hadoop2"}

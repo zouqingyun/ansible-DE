@@ -1,0 +1,109 @@
+---
+    - hosts: "{{ host }}"
+      remote_user: "{{ user }}"
+      gather_facts: false
+
+      tasks:
+        - name: Install packages
+#          yum: state=present name={{ item }}
+          raw: yum install -y {{item}}
+          with_items:
+              - gcc
+              - gcc-c++
+              - autoconf
+              - automake
+              - libxml2-devel
+              - sysstat
+              - vim
+              - iotop
+              - unzip
+              - htop
+              - iotop
+              - strace
+              - wget
+              - tar
+              - libselinux-python
+              - rsync
+              - rdate
+              - apr-util
+              - check-devel
+              - cairo-devel
+              - pango-devel
+              - libxml2-devel
+              - rpm-build
+              - glib2-devel
+              - dbus-devel
+              - freetype-devel
+              - fontconfig-devel
+              - expat-devel
+              - python-devel
+          tags:
+              - packages
+        - name: Selinux modify disabled
+          lineinfile:
+              dest: /etc/selinux/config
+              regexp: '^SELINUX='
+              line: 'SELINUX=disabled'
+          tags:
+              - testselinux
+        - name: Ensure two job that runs of crontab
+          cron:
+            name: "{{ item.name }}"
+            minute: "{{ item.minute}}"
+            job: "{{ item.job}}"
+          with_items:
+              - {
+                name: "Time synchronization",
+                minute: "10",
+                job: "/usr/bin/rdate -s 192.168.1.163 > /dev/null 2>&1"}
+              - {
+                name: "a job vmstat_output",
+                minute: "1",
+                job: "vmstat 1 10 > /tmp/vmstat_output"}
+              - {
+                name: "a job iostat_output",
+                minute: "1",
+                job: "/bin/bash /usr/local/zabbix/script/iostat.sh"}
+          tags:
+              - testcron
+
+        - name: Selinux modify disabled
+          lineinfile:
+              dest: /etc/selinux/config
+              regexp: '^SELINUX='
+              line: 'SELINUX=disabled'
+          tags:
+              - testselinux
+
+        - name: Modify ssh port 36102
+          lineinfile:
+              dest: /etc/ssh/{{ item }}
+              regexp: '^Port 36102'
+              insertafter: '#Port 22'
+              line: 'Port 36102'
+
+          with_items:
+              - sshd_config
+              - ssh_config
+          tags:
+              - sshport
+
+        - name: Set sysctl file limiits
+#         pam_limits: domain='*' limit_type={{item.limit_type}} limit_item={{item.limit_item}} value={{item.value}} 
+          pam_limits:
+              dest: "{{ item.dest }}"
+              domain: '*'
+              limit_type: "{{ item.limit_type }}"
+              limit_item: "{{ item.limit_item }}"
+              value: "{{ item.value }}"
+          with_items:
+              - { dest: '/etc/security/limits.conf',limit_type: 'soft',limit_item: 'nofile', value: '655350' }
+              - { dest: '/etc/security/limits.conf',limit_type: 'hard',limit_item: 'nofile', value: '655350'}
+              - { dest: '/etc/security/limits.conf',limit_type: 'soft',limit_item: 'nproc', value: '102400' }
+              - { dest: '/etc/security/limits.conf',limit_type: 'hard',limit_item: 'nproc', value: '102400' }
+              - { dest: '/etc/security/limits.conf',limit_type: 'soft',limit_item: 'sigpending', value: '255377' }
+              - { dest: '/etc/security/limits.conf',limit_type: 'hard',limit_item: 'sigpending', value: '255377' }
+              - { dest: '/etc/security/limits.d/90-nproc.conf', limit_type: 'soft',limit_item: 'nproc', value: '262144' }
+              - { dest: '/etc/security/limits.d/90-nproc.conf', limit_type: 'hard',limit_item: 'nproc', value: '262144' }
+          tags:
+                - setlimits

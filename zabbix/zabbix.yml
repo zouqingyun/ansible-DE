@@ -1,0 +1,100 @@
+---
+  - hosts: "{{ host }}"
+    remote_user: "{{ user }}"
+    gather_facts: false
+    tasks:
+
+        - name: Modify lineinfile
+          lineinfile:
+              dest: "{{ item.dest }}"
+              state: present
+              regexp: "{{ item.regexp }}"
+              line: "{{ item.line }}"
+              validate: 'visudo -cf %s'
+          with_items:
+                # - { 
+                #   dest: "/etc/zabbix/zabbix_agentd.conf",
+                #   regexp: "^Include",
+                #   line: "\n\n###Add include\nInclude=/etc/zabbix/zabbix_agentd.conf.d/*.conf" }
+              - {
+                dest: "/etc/sudoers",
+                regexp: "^Defaults    requiretty",
+                line: "# Defaults    requiretty" } 
+          tags:
+              - testline
+
+        - name: Copy configuration file
+          copy:
+              src: "{{ item.src }}"
+              dest: "{{ item.dest }}"
+              owner: root
+              group: root
+              mode: "{{ item.mode }}"
+          with_items:
+              - {
+                src: "/etc/init.d/zabbix_agentd",
+                dest: "/etc/init.d/zabbix_agentd",
+                mode: "0755"}
+          tags:
+              - testcopy
+        - name: Create a directory
+          file: path={{ item }} state=directory mode=0750
+          with_items:
+              - /etc/sudoers.d
+          tags:
+              - testdir
+ 
+        - name: Looping over Fileglobs
+          copy: src={{ item }} dest=/etc/sudoers.d/ owner=root mode=0440
+          with_fileglob:
+              - /etc/sudoers.d/*
+          tags:
+              - test_fileglobs
+
+        - name: synchronization of src on the control machine to dest on the remote hosts
+          synchronize:
+            src: "{{ item.src }}"
+            dest: "{{ item.dest }}"
+            recursive: yes
+            checksum: yes
+
+          with_items:
+              - {
+                src: "/etc/zabbix",
+                dest: "/etc/"}
+              - {
+                src: "/usr/local/zabbix",
+                dest: "/usr/local/"}
+          tags:
+              - sys_dir
+
+        - name: Ensure two job that runs of crontab
+          cron:
+            name: "{{ item.name }}"
+            minute: "{{ item.minute}}"
+            job: "{{ item.job}}"
+          with_items:
+                - { 
+                  name: "Time synchronization",
+                  minute: "10",
+                  job: "/usr/bin/rdate -s 192.168.1.163 > /dev/null 2>&1"}
+                - {
+                  name: "a job vmstat_output",
+                  minute: "1",
+                  job: "vmstat 1 10 > /tmp/vmstat_output"}
+                - {
+                  name: "a job iostat_output",
+                  minute: "1",
+                  job: "/bin/bash /usr/local/zabbix/script/iostat.sh"}
+          tags:
+              - testcron
+ 
+        - name: Starting zabbix_agentd
+          shell: /usr/local/zabbix/script/zabbix_agent.sh
+          tags:
+              - starting_zabbix_aqentd
+        
+        - name: Install omsa
+          shell: sh /usr/local/zabbix/script/dell.sh
+          tags:
+              - install_omsa

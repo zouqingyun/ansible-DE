@@ -1,0 +1,38 @@
+---
+  - hosts: "{{ host }}"
+    remote_user: "{{ user }}"
+    gather_facts: false
+    tasks:
+        - name: synchronization of src on the control machine to dest on the remote hosts
+          synchronize:
+            src: "{{ item.src }}"
+            dest: "{{ item.dest }}"
+            recursive: yes
+            checksum: yes
+
+          with_items:
+             - {
+                src: "/opt/package/",
+                dest: "/opt/"}
+          tags:
+              - sysdir
+
+        - name: Running configure for confuse
+          shell: 'cd /opt/package/fping-3.10  "{{item}}"'
+          with_items:
+              - ./configure
+          tags:
+              - run_config
+        - name: Running "make" for confuse
+          shell: 'cd /opt/package/fping-3.10  "{{item}}"'
+          with_items:
+              - make
+          tags:
+              - runmake
+        - name: Running "make install" for confuse
+          shell: 'cd /opt/package/fping-3.10 "{{item}}"'
+          with_items:
+              - make install 
+          tags:
+              - runinstall
+          

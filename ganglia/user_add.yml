@@ -1,0 +1,7 @@
+---
+    - hosts: "{{host}}"
+      remote_user: "{{user}}"
+      tasks:
+          - name: Add user ganglia
+            user: name=ganglia shell=/sbin/nologin createhome=no
+

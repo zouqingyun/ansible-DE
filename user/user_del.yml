@@ -1,0 +1,17 @@
+---
+  - hosts: "{{ host }}"
+    remote_user: "{{ user }}"
+    tasks:
+        - name: Del group
+          group:
+              name: "{{item.name}}"
+              state: absent
+          with_items:
+              - { name: "hadoop"}
+        - name: Del the user 'hadoop2' 
+          user:
+              name: "{{item.name}}"
+              state: absent
+              remove: yes
+          with_items:
+              - {name: "hadoop2"}

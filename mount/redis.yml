@@ -1,0 +1,27 @@
+---
+    - hosts: "{{ host }}"
+      remote_user: "{{ user }}"
+      gather_facts: false
+
+      tasks:
+          - name: Create a directory if "it doesn't exist"
+            file: 
+                path: "{{item.path}}"
+                state: directory
+                mode: 0755
+            with_items:
+                - {
+                  path: "/data0"}
+            tags:
+                - create_dir
+          - name: Mount up device by UUID
+            mount:
+                name: /data0
+                src: UUID={{item}}
+                fstype: ext4
+                state: present
+            with_items:
+                    - fff3788c-3dfb-4b36-b5ce-f02e6eab6204
+#                    - e2ecc07d-1ad9-4d00-b5ef-291f21142b86
+#                    - d5ca3e80-0190-4e77-bdd7-ef30636a61d4
+               

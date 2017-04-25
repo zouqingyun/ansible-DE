@@ -1,0 +1,82 @@
+---
+  - hosts: "{{ host }}"
+    remote_user: "{{ user }}"
+    gather_facts: false
+    tasks:
+        - name: Copy configuration file
+          copy:
+              src: "{{ item.src }}"
+              dest: "{{ item.dest }}"
+              owner: root
+              group: root
+              mode: "{{ item.mode }}"
+          with_items:
+              - {
+                src: "/etc/init.d/gmond",
+                dest: "/etc/init.d/gmond",
+                mode: "0755"}
+          tags:
+              - copy_gmond
+        - name: synchronization of src on the control machine to dest on the remote hosts
+          synchronize:
+            src: "{{ item.src }}"
+            dest: "{{ item.dest }}"
+            recursive: yes
+            checksum: yes
+
+          with_items:
+              - {
+                src: "/etc/ganglia",
+                dest: "/etc/"}
+              - {
+                src: "/opt/qingyun/confuse-2.7",
+                dest: "/opt/"}
+              - {
+                src: "/usr/local/ganglia",
+                dest: "/usr/local"}
+          tags:
+              - sysdir
+        - name: Gmond modify name and port
+          replace:
+              dest: /etc/ganglia/gmond.conf
+              regexp:  "{{ item.regexp }}"
+              replace: "{{ item.replace }}"
+              backup: yes
+          with_items:
+              - {
+                regexp: 'name = "webserver"',
+                replace: 'name = "redis3.0"'}
+              - {
+                regexp: "host = dcserver2",
+                replace: "host = dcredis204"}
+              - {
+                regexp: "port = 8658",
+                replace: "port = 8656"}
+          tags:
+              - update_gmond
+ 
+         
+
+        - name: Running configure for confuse
+          shell: 'cd /opt/confuse-2.7/ "{{item}}"'
+          with_items:
+              - ./configure CFLAGS=-fPIC --disable-nls
+          tags:
+              - run_config
+        - name: Running "make" for confuse
+          shell: 'cd /opt/confuse-2.7/ "{{item}}"'
+          with_items:
+              - make
+          tags:
+              - runmake
+        - name: Running "make install" for confuse
+          command: 'make install  chdir=/opt/confuse-2.7'
+          tags:
+              - runinstall
+          
+        - name: Enable gmond service
+          service: name=gmond enabled=yes
+       
+        - name: Start gmond 
+          service: name=gmond state=started
+
